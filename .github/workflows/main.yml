@@ -1,0 +1,63 @@
+name: Deploy to server 7omos and eldapour 🚀
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3' # Update to the PHP version used on your server
+          tools: composer
+
+      - name: Ensure Storage and Cache Paths Exist
+        run: |
+          mkdir -p storage/framework/cache
+          mkdir -p storage/framework/sessions
+          mkdir -p storage/framework/views
+          chmod -R 775 storage
+          chmod -R 775 bootstrap/cache
+
+      - name: Install PHP dependencies
+        run: composer update
+
+      - name: Deploy to Server
+        uses: easingthemes/ssh-deploy@main
+        with:
+          TARGET: domains/zimamapps.com/public_html/admin-rcmc
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_HOST: 145.223.17.250
+          REMOTE_USER: u766532697
+          REMOTE_PORT: 65002
+          EXCLUDE: |
+            .git
+            .github
+            .env.example
+            npm-debug.log
+
+      - name: Run Server Commands
+        uses: appleboy/ssh-action@master
+        with:
+          host: 145.223.17.250
+          username: u766532697
+          port: 65002
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd domains/zimamapps.com/public_html/admin-rcmc
+            php artisan optimize:clear
+            php artisan cache:clear
+            php artisan route:clear
+            php artisan config:clear
+            php artisan view:clear
+            php artisan clear-compiled
+
+             php artisan migrate
+
